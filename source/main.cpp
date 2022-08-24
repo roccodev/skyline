@@ -1,6 +1,6 @@
 #include "main.hpp"
 
-#include "skyline/logger/TcpLogger.hpp"
+#include "skyline/logger/KernelLogger.hpp"
 #include "skyline/utils/ipc.hpp"
 #include "skyline/utils/cpputils.hpp"
 #include "skyline/utils/utils.h"
@@ -25,25 +25,6 @@ void exception_handler(nn::os::UserExceptionInfo* info) {
 }
 
 static skyline::utils::Task* after_romfs_task = new skyline::utils::Task{[]() {
-    // mount sd
-    // nn::os::SleepThread(nn::TimeSpan::FromSeconds(2));
-
-    // nn::fs::FileHandle handle;
-    // int64_t file_size = 0;
-
-    // nn::fs::OpenFile(&handle, "rom:/data.arc", nn::fs::OpenMode_Read);
-    // nn::fs::GetFileSize(&file_size, handle);
-    // nn::fs::CloseFile(handle);
-
-    const size_t poolSize = 0x600000;
-    void* socketPool = memalign(0x4000, poolSize);
-    nn::socket::Initialize(socketPool, poolSize, 0x20000, 14);
-
-    skyline::logger::s_Instance->StartThread();
-
-    Result rc = nn::fs::MountSdCardForDebug("sd");
-    skyline::logger::s_Instance->LogFormat("[skyline_main] Mounted SD (0x%x)", rc);
-
     // load plugins
     skyline::plugin::Manager::LoadPlugins();
 }};
@@ -109,12 +90,11 @@ void skyline_main() {
     // init hooking setup
     A64HookInit();
 
-    skyline::logger::setup_socket_hooks();
-
     // initialize logger
-    skyline::logger::s_Instance = new skyline::logger::TcpLogger();
-    skyline::logger::s_Instance->Log("[skyline_main] Begining initialization.\n");
-
+    skyline::logger::s_Instance = new skyline::logger::KernelLogger();
+    skyline::logger::s_Instance->Initialize();
+    skyline::logger::s_Instance->Log("[skyline_main] Beginning initialization.\n");
+    
     // override exception handler to dump info
     nn::os::SetUserExceptionHandler(exception_handler, exception_handler_stack, sizeof(exception_handler_stack),
                                     &exception_info);
@@ -126,9 +106,9 @@ void skyline_main() {
     A64HookFunction(reinterpret_cast<void*>(nn::ro::Initialize), reinterpret_cast<void*>(nn_ro_init), (void**)&nnRoInitializeImpl);
 
     // hook abort to get crash info
-    /* uintptr_t VAbort_ptr = 0;
+    /*uintptr_t VAbort_ptr = 0;
     nn::ro::LookupSymbol(&VAbort_ptr, "_ZN2nn4diag6detail10VAbortImplEPKcS3_S3_iPKNS_6ResultEPKNS_2os17UserExceptionInfoES3_St9__va_list");
-    A64HookFunction(reinterpret_cast<void*>(VAbort_ptr), reinterpret_cast<void*>(handleNnDiagDetailVAbortImpl), (void**)&VAbortImpl); */
+    A64HookFunction(reinterpret_cast<void*>(VAbort_ptr), reinterpret_cast<void*>(handleNnDiagDetailVAbortImpl), (void**)&VAbortImpl);*/
 
     // mount rom
     
@@ -138,21 +118,6 @@ void skyline_main() {
                                            skyline::utils::g_MainTextAddr, skyline::utils::g_MainRodataAddr,
                                            skyline::utils::g_MainDataAddr, skyline::utils::g_MainBssAddr,
                                            skyline::utils::g_MainHeapAddr);
-
-    
-
-    // TODO: experiment more with NVN
-    /*nvnInit(NULL);
-
-    NVNdeviceBuilder deviceBuilder;
-    nvnDeviceBuilderSetDefaults(&deviceBuilder);
-    nvnDeviceBuilderSetFlags(&deviceBuilder, 0);
-
-    NVNdevice device;
-    nvnDeviceInitialize(&device, &deviceBuilder);
-
-    nvnInit(&device); // re-init with our newly acquired device
-    */
 }
 
 extern "C" void skyline_init() {

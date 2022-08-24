@@ -82,7 +82,8 @@ void Logger::Log(const char* data, size_t size) {
     memcpy(ptr, data, size);
     // ptr[size] = '\n';
 
-    AddToQueue(ptr);
+    SendRaw(ptr, strlen(ptr));
+    delete[] ptr;
     return;
 }
 
@@ -98,7 +99,8 @@ void Logger::LogFormat(const char* format, ...) {
     vsnprintf(ptr, len + 1, format, args);
     ptr[len] = '\n';
 
-    AddToQueue(ptr);
+    SendRaw(ptr, strlen(ptr));
+    delete[] ptr;
     va_end(args);
 
     return;

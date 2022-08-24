@@ -20,6 +20,10 @@ void KernelLogger::Initialize() {
     // nothing to do
 }
 
+bool KernelLogger::ShouldFlush() {
+    return false;
+}
+
 void KernelLogger::SendRaw(void* data, size_t size) {
     const char* str = (const char*)data;
     svcOutputDebugString(str, strlen(str));
