@@ -33,6 +33,10 @@ SECTIONS
   /* App name */
   .module_name : { KEEP (*(.rodata.module_name)) } :rodata
 
+  . = ALIGN(4);
+  
+  .mod0 : { KEEP (*(.rodata.mod0)) } :rodata
+  
   /* Make sure everything is aligned */
   . = ALIGN(8);
 
